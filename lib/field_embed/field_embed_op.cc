@@ -131,7 +131,7 @@ class FieldEmbedGradOp : public OpKernel {
             const Tensor& grad = context->input(4);
 
             auto features_flat = features.flat<int>();
-            auto vals_flat = features.flat<float>();
+            auto vals_flat = vals.flat<float>();
             auto weights_flat = weights.flat<float>();
             auto grad_flat = grad.flat<float>();
 
@@ -144,8 +144,8 @@ class FieldEmbedGradOp : public OpKernel {
             Tensor* weights_grad_tensor = NULL;
             Tensor* biases_grad_tensor = NULL;
             OP_REQUIRES_OK(context, context->allocate_output(0, vals.shape(), &vals_grad_tensor));
-            OP_REQUIRES_OK(context, context->allocate_output(0, weights.shape(), &weights_grad_tensor));
-            OP_REQUIRES_OK(context, context->allocate_output(0, biases.shape(), &biases_grad_tensor));
+            OP_REQUIRES_OK(context, context->allocate_output(1, weights.shape(), &weights_grad_tensor));
+            OP_REQUIRES_OK(context, context->allocate_output(2, biases.shape(), &biases_grad_tensor));
             auto vals_grad = vals_grad_tensor->template flat<float>();
             auto weights_grad = weights_grad_tensor->template flat<float>();
             auto biases_grad = biases_grad_tensor->template flat<float>();

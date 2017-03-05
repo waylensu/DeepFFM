@@ -35,14 +35,18 @@ class DataSet(object):
         end = self._index_in_epoch
         return self._inds[start:end], self._vals[start:end], self._labels[start:end]
 
-def read_data_sets(train_dir,
-                   validation_size=5000):
+def read_data_sets(train_dir):
 
-    inds = numpy.loadtxt(osp.join(train_dir, 'train_ind.txt'))
-    vals = numpy.loadtxt(osp.join(train_dir, 'train_val.txt'))
+    cate_chosen = [ x+ 13 for x in [0,1,4,5,7,8,13,16,19,21,22,24] ]
+    int_chosen = list(range(13))
+    chosen = numpy.array(int_chosen+cate_chosen)
+    inds = numpy.loadtxt(osp.join(train_dir, 'train_ind.txt'),int)[:,chosen]
+    vals = numpy.loadtxt(osp.join(train_dir, 'train_val.txt'))[:,chosen]
     labels_ = numpy.loadtxt(osp.join(train_dir, 'train_label.txt'))
     labels = numpy.array([ [0,1] if x == 1. else [1,0] for x in labels_])
 
+    validation_size=int(len(labels)/5);
+    
     validation_inds = inds[:validation_size]
     validation_vals = vals[:validation_size]
     validation_labels = labels[:validation_size]

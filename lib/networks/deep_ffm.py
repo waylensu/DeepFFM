@@ -3,6 +3,7 @@ from __future__ import (division,absolute_import,print_function,unicode_literals
 
 from networks.network import Network
 import tensorflow as tf
+import numpy 
 
 class Deepffm(Network):
     def __init__(self, trainable=True):
@@ -19,9 +20,13 @@ class Deepffm(Network):
     def load_limits(self,limits_path = '/Volumes/Untitled/data_set/pre/limits.txt'):
         with open(limits_path) as inFile:
             cols = inFile.readline().strip().split('\t')
+            cate_chosen = [ x+ 13 for x in [0,1,4,5,7,8,13,16,19,21,22,24] ]
+            int_chosen = list(range(13))
+            chosen = numpy.array(int_chosen+cate_chosen)
+            lens = numpy.array([1]*13+list(map(int,cols)))[chosen]
             limits = [0]
-            for col in cols:
-                limits.append(limits[-1] + int(col))
+            for l in lens:
+                limits.append(limits[-1] + l)
         self.limits = limits
 
     def setup(self):

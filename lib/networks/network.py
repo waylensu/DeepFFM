@@ -2,10 +2,10 @@
 from __future__ import (division,absolute_import,print_function,unicode_literals)
 import numpy as np
 import tensorflow as tf
-from field_embed.field_embed_op import field_embed_op
-from field_embed.field_embed_op import field_embed_grad
-from product_layer.product_layer_op import product_layer_op
-from product_layer.product_layer_op import product_layer_grad
+from field_embed.field_embed_op import field_embed as field_embed_op
+import field_embed.field_embed_op_grad
+from product_layer.product_layer_op import product_layer as product_layer_op
+import product_layer.product_layer_op_grad
 
 DEFAULT_PADDING = 'SAME'
 
@@ -226,10 +226,11 @@ class Network(object):
             biases = self.make_var('biases',[field_size, field_size, embed_size], init_biases, trainable)
 
             output = field_embed_op(features, vals, weights, biases, limits)
-            print(output.get_shape())
+            print('field_embed',output.get_shape())
             return output
 
     @layer
     def product_layer(self, input, name):
-        print(input.get_shape())
-        return product_layer_op(input)
+        output = product_layer_op(input)
+        print('product_layer',output.get_shape())
+        return output

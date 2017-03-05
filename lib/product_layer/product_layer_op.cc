@@ -16,7 +16,18 @@ REGISTER_OP("ProductLayer")
 .Input("bottom_data: float")//batch_size,field_size,field_size(in),embed_size
 .Output("top_data: float")//batch_size,(field_size*(field_size+1)/2)
 .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
-        c->set_output(0, c->input(0));
+        auto batch_size_handle = c->Dim(c->input(0),0);
+        auto field_size_handle = c->Dim(c->input(0),1);
+        ::tensorflow::shape_inference::DimensionHandle mul, add ,divide;
+        ::tensorflow::shape_inference::DimensionOrConstant divisor(2);
+        c->Multiply(field_size_handle, field_size_handle, &mul);
+        c->Add(field_size_handle, mul, &add);
+        c->Divide(add, divisor, false, &divide);
+
+        std::vector<::tensorflow::shape_inference::DimensionHandle> dims;
+        dims.push_back(batch_size_handle);
+        dims.push_back(divide);
+        c->set_output(0,c->MakeShape(dims));
         return Status::OK();
         });
 

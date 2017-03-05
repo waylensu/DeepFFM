@@ -3,7 +3,7 @@ from __future__ import (division,absolute_import,print_function,unicode_literals
 
 import tensorflow as tf
 from tensorflow.python.framework import ops
-import field_embed_op
+from field_embed import field_embed_op
 import pdb
 
 @ops.RegisterGradient("FieldEmbed")
@@ -24,6 +24,6 @@ def _field_embed_grad(op, grads):
   limits = op.get_attr('limits')
 
   # compute gradient
-  vals_grad, weights_grad, biases_grad = field_embed_op.field_embed_grad(features, vals, weights, biases, grad, limits)
+  vals_grad, weights_grad, biases_grad = field_embed_op.field_embed_grad(features, vals, weights, biases, grads, limits)
 
   return [None, vals_grad, weights_grad, biases_grad]  # List of one Tensor, since we have one input

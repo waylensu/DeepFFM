@@ -3,7 +3,7 @@ from __future__ import (division,absolute_import,print_function,unicode_literals
 
 import tensorflow as tf
 from tensorflow.python.framework import ops
-import product_layer_op
+from product_layer import product_layer_op
 import pdb
 
 @ops.RegisterGradient("ProductLayer")
