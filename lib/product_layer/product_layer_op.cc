@@ -80,15 +80,18 @@ class ProductLayerOp: public OpKernel {
                     auto rhs_data = bottom_flat.data() + ((batch * field_size + rhs) * field_size + lhs) * embed_size;
                     float sum = 0;
                     for(int i = 0; i < embed_size; ++i){
-                        sum += lhs_data[i] * rhs_data[i];
+                        if(lhs==rhs){
+                            sum += lhs_data[i];
+                        }else{
+                            sum += lhs_data[i] * rhs_data[i];
+                        }
                     }
                     top_flat(b) = sum;
                 }
             };
             const DeviceBase::CpuWorkerThreads& worker_threads=
                 *(context->device()->tensorflow_cpu_worker_threads());
-            const int64 shard_cost=
-                batch_size * field_size;
+            const int64 shard_cost = batch_size * field_size;
             Shard(worker_threads.num_threads, worker_threads.workers, dims[0] * dims[1], shard_cost,shard);
 
         }
@@ -137,8 +140,12 @@ class ProductLayerGradOp : public OpKernel {
                     float grad = *(top_grad_flat.data() + batch * top_len + offset);
                     int lhs_offset = ((batch * field_size + lhs) * field_size + rhs ) * embed_size + embed;
                     int rhs_offset = ((batch * field_size + rhs) * field_size + lhs ) * embed_size + embed;
-                    bottom_grad_flat(lhs_offset) = grad * bottom_flat(rhs_offset);
-                    bottom_grad_flat(rhs_offset) = grad * bottom_flat(lhs_offset);
+                    if(lhs==rhs){
+                        bottom_grad_flat(lhs_offset) = grad;
+                    }else{
+                        bottom_grad_flat(lhs_offset) = grad * bottom_flat(rhs_offset);
+                        bottom_grad_flat(rhs_offset) = grad * bottom_flat(lhs_offset);
+                    }
                 }
             };
             const DeviceBase::CpuWorkerThreads& worker_threads=

@@ -10,9 +10,6 @@ save_path = '/Volumes/Untitled/data_set/pre'
 train_ind_path = osp.join(save_path, 'train_ind.txt')
 train_val_path = osp.join(save_path, 'train_val.txt')
 train_label_path = osp.join(save_path, 'train_label.txt')
-#test_ind_path = osp.join(save_path, 'test_ind.txt')
-#test_val_path = osp.join(save_path, 'test_val.txt')
-#test_label_path = osp.join(save_path, 'test_label.txt')
 limits_path = osp.join(save_path, 'limits.txt')
 
 int_max = [0] * 13
@@ -58,7 +55,6 @@ def transform(src_path, ind_path, val_path, label_path, is_train = True, ind_len
 
 
 transform(train_path, train_ind_path, train_val_path, train_label_path)
-#transform(test_path, test_ind_path, test_val_path, test_label_path, False)
 
 with open(limits_path, 'w') as out_file:
     out_file.write('\t'.join(map(str,int_max)) + '\n')

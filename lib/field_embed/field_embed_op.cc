@@ -9,6 +9,7 @@
 #include "tensorflow/core/util/work_sharder.h"
 #include "tensorflow/core/framework/shape_inference.h"
 #include <iostream>
+#include <exception>
 
 using namespace tensorflow;
 typedef Eigen::ThreadPoolDevice CPUDevice;
@@ -87,20 +88,26 @@ class FieldEmbedOp : public OpKernel {
             auto shard = [embed_size, field_size, batch_size, &features_flat, &limits, &vals_flat, &weights_flat, &biases_flat, &output](int64 start, int64 limit)
             {
                 for(int64 b = start; b < limit; ++b){
-                    int n = b;//(batch,field,field_in,embed)
-                    int embed = n % embed_size;
-                    n /= embed_size;
-                    int field_in = n % field_size;
-                    n /= field_size;
-                    int field = n % field_size;
-                    n /= field_size;
-                    int batch = n;
+                    try{
+                        int n = b;//(batch,field,field_in,embed)
+                        int embed = n % embed_size;
+                        n /= embed_size;
+                        int field_in = n % field_size;
+                        n /= field_size;
+                        int field = n % field_size;
+                        n /= field_size;
+                        int batch = n;
 
-                    int feature = *(features_flat.data() + batch * field_size + field) + limits[field];
-                    float val = *(vals_flat.data() + batch * field_size + field);
-                    float weight = *(weights_flat.data() + (feature * field_size + field_in) * embed_size + embed);
-                    float bias = *(biases_flat.data() + (field * field_size + field_in) * embed_size + embed);
-                    output(b) = weight * val + bias;
+                        int feature = *(features_flat.data() + batch * field_size + field) + limits[field];
+                        float val = *(vals_flat.data() + batch * field_size + field);
+                        float weight = *(weights_flat.data() + (feature * field_size + field_in) * embed_size + embed);
+                        float bias = *(biases_flat.data() + (field * field_size + field_in) * embed_size + embed);
+                        output(b) = weight * val + bias;
+                    }
+                    catch (std::exception &e){
+                        std::cout<<"Error:"<<e.what()<<std::endl;
+
+                    }
                 }
             };
             const DeviceBase::CpuWorkerThreads& worker_threads=
@@ -162,11 +169,12 @@ class FieldEmbedGradOp : public OpKernel {
                         int field = n % field_size;
                         int batch = n / field_size;
                         int feature = *(features_flat.data() + batch * field_size + field) + limits[field];
-                        float val_grad = 0;
+                        float val_grad, weight, output_grad;
+                        val_grad = 0;
                         for(int field_in = 0; field_in < field_size; ++field_in){
                             for(int embed = 0; embed < embed_size; ++embed){
-                                float weight = *(weights_flat.data() + (feature * field_size + field_in) * embed_size + embed);
-                                float output_grad = *(grad_flat.data() + ((batch * field_size + field) * field_size + field_in) * embed_size + embed);
+                                weight = *(weights_flat.data() + (feature * field_size + field_in) * embed_size + embed);
+                                output_grad = *(grad_flat.data() + ((batch * field_size + field) * field_size + field_in) * embed_size + embed);
                                 val_grad += weight * output_grad;
                             }
                         }
@@ -178,12 +186,15 @@ class FieldEmbedGradOp : public OpKernel {
                         int field_in = n % field_size;
                         n /= field_size;
                         int field = n;
+                        float weight_grad, val, output_grad;
                         for(int feature = limits[field]; feature < limits[field+1]; ++feature){
-                            float weight_grad = 0;
+                            weight_grad = 0;
                             for(int batch = 0; batch < batch_size; ++batch){
-                                float val = *(vals_flat.data() + (batch * field_size + field));
-                                float output_grad = *(grad_flat.data() + ((batch * field_size + field) * field_size + field_in) * embed_size + embed);
-                                weight_grad += val * output_grad;
+                                if( *(features_flat.data() + batch * field_size + field) == feature){
+                                    val = *(vals_flat.data() + (batch * field_size + field));
+                                    output_grad = *(grad_flat.data() + ((batch * field_size + field) * field_size + field_in) * embed_size + embed);
+                                    weight_grad += val * output_grad;
+                                }
                             }
                             weights_grad((feature * field_size + field_in) * embed_size + embed) = weight_grad;
                         }

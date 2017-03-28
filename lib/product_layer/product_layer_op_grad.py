@@ -17,9 +17,8 @@ def _product_layer_grad(op, grads):
     Gradients with respect to the input of `product_layer`.
   """
   bottom_data = op.inputs[0]
-  top_data = op.outputs[0]
 
   # compute gradient
-  bottom_grad = product_layer_op.product_layer_grad(bottom_data, top_data)
+  bottom_grad = product_layer_op.product_layer_grad(bottom_data, grads)
 
   return [bottom_grad]  # List of one Tensor, since we have one input

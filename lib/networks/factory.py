@@ -14,9 +14,9 @@ import pdb
 import tensorflow as tf
 
 
-def get_network(name = None):
+def get_network(chosen, name = None):
     """Get a network by name."""
-    return networks.deep_ffm.Deepffm()
+    return networks.deep_ffm.Deepffm(chosen)
     
 def list_networks():
     """List all registered imdbs."""

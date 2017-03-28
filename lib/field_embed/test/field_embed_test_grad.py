@@ -3,8 +3,9 @@ from __future__ import (division,absolute_import,print_function,unicode_literals
 
 import tensorflow as tf
 import os.path as osp
-from field_embed_op import field_embed_grad
+from field_embed.field_embed_op import field_embed as field_embed_op
 import numpy as np
+from sklearn.datasets import load_digits
 
 sess = tf.InteractiveSession()
 
@@ -22,7 +23,7 @@ embed_size = 3
 limits = [0, 2, 4]
 
 init = tf.global_variables_initializer()
-output = field_embed_grad(features, vals, weights, biases, grad,limits)
+output = field_embed_op(features, vals, weights, biases, limits)
 
 sess.run(init)
 result=sess.run(output)

@@ -11,15 +11,18 @@ sess = tf.InteractiveSession()
 
 bottom_data = np.ones((1,2,2,2))
 
-#bottom_data[0][1][0][0]=2
+#bottom_data[0][0][1]=[3,3]
+#bottom_data[0][1][0]=[3,3]
 #init = tf.global_variables_initializer()
 #top_data=product_layer(bottom_data)
 #sess.run(init)
 #result=sess.run(top_data)
+#print(result)
 
 
-top_grad = np.ones((1,3))
-#top_grad[0][1]=2
+top_grad = np.zeros((1,3))
+top_grad[0][0]=2
 bottom_grad = product_layer_grad(bottom_data,top_grad)
 result=sess.run(bottom_grad)
 
+print(result)
