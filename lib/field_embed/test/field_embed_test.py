@@ -16,8 +16,8 @@ features_size = 64
 class_size = 10
 limits = list(range(field_size + 1))
 
-weights = tf.Variable(tf.zeros([features_size,class_size]))
-biases = tf.Variable(tf.zeros([class_size]))
+weights = tf.Variable(tf.zeros([features_size,field_size,class_size]))
+biases = tf.Variable(tf.zeros([field_size,field_size,class_size]))
 
 digits = load_digits()
 vals = digits.data.astype('float32').tolist()

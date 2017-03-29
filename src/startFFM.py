@@ -33,7 +33,7 @@ data_set = read_data_sets('/Users/wing/DataSet/criteo/sample',chosen)
 #data_set = read_data_sets('/Volumes/Untitled/data_set/pre',chosen)
 
 # Load limits
-limits_path = '/Volumes/Untitled/data_set/pre/limits.txt'
+limits_path = '/Users/wing/DataSet/criteo/sample/limits.txt'
 limits = [0]
 with open(limits_path) as inFile:
     cols = inFile.readline().strip().split('\t')

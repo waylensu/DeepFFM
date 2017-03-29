@@ -39,21 +39,24 @@ def read_data_sets(train_dir, chosen = None):
 
     inds = numpy.loadtxt(osp.join(train_dir, 'train_ind.txt'),int)
     vals = numpy.loadtxt(osp.join(train_dir, 'train_val.txt'))
-    if isinstance(chosen, numpy.ndarray):
-        inds = inds[:,chosen]
-        vals = vals[:,chosen]
 
     labels = numpy.loadtxt(osp.join(train_dir, 'train_label.txt'))
-    #labels = numpy.array([ [0,1] if x == 1. else [1,0] for x in labels_])
 
     validation_size=int(len(labels)/5);
     
-    validation_inds = inds[:validation_size]
-    validation_vals = vals[:validation_size]
     validation_labels = labels[:validation_size]
-    train_inds = inds[validation_size:]
-    train_vals = vals[validation_size:]
     train_labels = labels[validation_size:]
+
+    if isinstance(chosen, numpy.ndarray):
+        validation_inds = inds[:validation_size,chosen]
+        validation_vals = vals[:validation_size,chosen]
+        train_inds = inds[validation_size:,chosen]
+        train_vals = vals[validation_size:,chosen]
+    else:
+        validation_inds = inds[:validation_size]
+        validation_vals = vals[:validation_size]
+        train_inds = inds[validation_size:]
+        train_vals = vals[validation_size:]
 
     train = DataSet(train_inds, train_vals, train_labels)
     validation = DataSet(validation_inds, validation_vals, validation_labels)
