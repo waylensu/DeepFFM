@@ -19,7 +19,6 @@ from tensorflow.contrib.keras import layers as keras
 from easydict import EasyDict as edict
 
 def variable_summaries(var):
-"""Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
     with tf.name_scope('summaries'):
         mean = tf.reduce_mean(var)
         tf.summary.scalar('mean', mean)
@@ -125,12 +124,13 @@ class DeepFFM():
             self.l2_loss = tf.nn.l2_loss(biases)
             variable_summaries(weights)
             variable_summaries(biases)
-            tf.summary.scalar('cross_entropy', self.logits)
 
         # Loss
         with tf.name_scope("loss"):
-            losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels_)
-            self.loss =  tf.reduce_mean(losses) + l2_reg_lambda * self.l2_loss
+            cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels_))
+            self.loss =  cross_entropy + l2_reg_lambda * self.l2_loss
+            tf.summary.scalar('cross_entropy', cross_entropy)
+            tf.summary.scalar('loss', self.loss)
 
         # Accuracy
         with tf.name_scope("accuracy"):
@@ -146,6 +146,6 @@ class DeepFFM():
     def act_summary(self, input_tensor, act=keras.PReLU()):
         tf.summary.histogram('pre_activations', input_tensor)
         prelu = keras.PReLU()
-        activations = prelu(preactivate)
+        activations = prelu(input_tensor)
         tf.summary.histogram('activations', activations)
         return activations

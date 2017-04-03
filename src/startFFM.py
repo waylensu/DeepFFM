@@ -32,7 +32,7 @@ def train():
     chosen = np.array(range(39))
 
     # Load limits
-    limits_path = os.path.join(path, 'limits.txt')
+    limits_path = os.path.join(FLAGS.data_dir, 'limits.txt')
     limits = [0]
     with open(limits_path) as inFile:
         cols = inFile.readline().strip().split('\t')
@@ -47,16 +47,17 @@ def train():
         batch_size = 1000
         inds, vals, labels = inputs(train_file, batch_size, FLAGS.num_epochs)    
         test_inds, test_vals, test_labels = inputs(test_file, batch_size)    
-        deepffm = DeepFFM(limits, 8, l2_reg_lambda = 0.0005, NUM_CLASSES = 2, inds = inds, vals = vals, labels = labels)
+        deepffm = DeepFFM(limits, 8, l2_reg_lambda = 0.0001, NUM_CLASSES = 2, inds = inds, vals = vals, labels = labels)
         train_op = optimizer.minimize(deepffm.loss, global_step = global_step)
         #momentum = 0.9
         #train_op = tf.train.GradientDescentOptimizer(lr).minimize(deepffm.loss)
         #train_op = tf.train.MomentumOptimizer(lr, momentum).minimize(deepffm.loss)
 
         merged = tf.summary.merge_all()
+        sess=tf.Session()
+
         train_writer = tf.summary.FileWriter(FLAGS.log_dir + '/train', sess.graph)
         test_writer = tf.summary.FileWriter(FLAGS.log_dir + '/test')
-        sess=tf.Session()
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
