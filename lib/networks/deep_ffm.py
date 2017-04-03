@@ -18,7 +18,20 @@ from tensorflow.contrib.metrics import streaming_auc
 from tensorflow.contrib.keras import layers as keras
 from easydict import EasyDict as edict
 
+def variable_summaries(var):
+"""Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+    with tf.name_scope('summaries'):
+        mean = tf.reduce_mean(var)
+        tf.summary.scalar('mean', mean)
+        with tf.name_scope('stddev'):
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+        tf.summary.scalar('stddev', stddev)
+        tf.summary.scalar('max', tf.reduce_max(var))
+        tf.summary.scalar('min', tf.reduce_min(var))
+        tf.summary.histogram('histogram', var)
+
 class DeepFFM():
+
 
     def __init__(self, limits, embed_size=8, fc1_size=200, fc2_size=100, l2_reg_lambda=0.0, NUM_CLASSES=2, inds=None, vals=None, labels=None):
 
@@ -59,28 +72,23 @@ class DeepFFM():
             prelu = keras.PReLU()
             self.linear1 = prelu(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
             self.l2_loss = tf.nn.l2_loss(weights)
-            self.linear1_ = edict()
-            self.linear1_.weights = weights
-            self.linear1_.scale = scale
-            self.linear1_.beta = beta
             '''
 
         # Field_embed
         with tf.name_scope("field_embed"):
             weights = tf.Variable(init_weights([features_size, field_size, embed_size]), name="weights")
             biases = tf.Variable(init_biases([field_size, field_size, embed_size]), name='biases')
-            prelu = keras.PReLU()
-            self.field_embed = prelu(field_embed_op(self.inds_, self.vals_, weights, biases, limits))
+
+            self.field_embed = self.act_summary(field_embed_op(self.inds_, self.vals_, weights, biases, limits))
+
             self.l2_loss = tf.nn.l2_loss(weights)
             self.l2_loss = tf.nn.l2_loss(biases)
-            self.field_embed_ = edict()
-            self.field_embed_.weights = weights
-            self.field_embed_.biases = biases
+            variable_summaries(weights)
+            variable_summaries(biases)
 
         # Product_layer
         with tf.name_scope("product_layer"):
-            prelu = keras.PReLU()
-            self.product_layer = prelu(product_layer_op(self.field_embed))
+            self.product_layer = self.act_summary(product_layer_op(self.field_embed))
 
         # Full Connect 1 with BN
         with tf.name_scope("fc1"):
@@ -90,13 +98,10 @@ class DeepFFM():
             batch_mean, batch_var = tf.nn.moments(z_BN, [0])
             scale = tf.Variable(tf.ones([fc1_size]))
             beta = tf.Variable(tf.zeros([fc1_size]))
-            prelu = keras.PReLU()
-            self.fc1 = prelu(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
+            self.fc1 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
+
             self.l2_loss = tf.nn.l2_loss(weights)
-            self.fc1_ = edict()
-            self.fc1_.weights = weights
-            self.fc1_.scale = scale
-            self.fc1_.beta = beta
+            variable_summaries(weights)
 
         # Linear 2 with BN
         with tf.name_scope("fc2"):
@@ -105,13 +110,9 @@ class DeepFFM():
             batch_mean, batch_var = tf.nn.moments(z_BN, [0])
             scale = tf.Variable(tf.ones([fc2_size]))
             beta = tf.Variable(tf.zeros([fc2_size]))
-            prelu = keras.PReLU()
-            self.fc2 = prelu(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
+            self.fc2 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
             self.l2_loss = tf.nn.l2_loss(weights)
-            self.fc2_ = edict()
-            self.fc2_.weights = weights
-            self.fc2_.scale = scale
-            self.fc2_.beta = beta
+            variable_summaries(weights)
 
         # Softmax
         with tf.name_scope("Softmax"):
@@ -119,11 +120,12 @@ class DeepFFM():
             biases = tf.Variable(init_biases([NUM_CLASSES]), name='biases')
             self.logits = tf.nn.softmax(tf.matmul(self.fc2, weights) + biases, name="scores")
             self.predictions = tf.argmax(self.logits, 1, name="predictions")
+
             self.l2_loss = tf.nn.l2_loss(weights)
             self.l2_loss = tf.nn.l2_loss(biases)
-            self.softmax_ = edict()
-            self.softmax_.weights = weights
-            self.softmax_.biases = biases
+            variable_summaries(weights)
+            variable_summaries(biases)
+            tf.summary.scalar('cross_entropy', self.logits)
 
         # Loss
         with tf.name_scope("loss"):
@@ -134,9 +136,16 @@ class DeepFFM():
         with tf.name_scope("accuracy"):
             correct_predictions = tf.equal(self.predictions, self.labels_)
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
+            tf.summary.scalar('accuracy', self.accuracy)
 
         # Auc
         with tf.name_scope("auc"):
             _,self.auc = streaming_auc(self.logits[:,1], self.labels_)
 
 
+    def act_summary(self, input_tensor, act=keras.PReLU()):
+        tf.summary.histogram('pre_activations', input_tensor)
+        prelu = keras.PReLU()
+        activations = prelu(preactivate)
+        tf.summary.histogram('activations', activations)
+        return activations
