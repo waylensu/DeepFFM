@@ -32,7 +32,7 @@ def variable_summaries(var):
 class DeepFFM():
 
 
-    def __init__(self, limits, embed_size=8, fc1_size=200, fc2_size=100, l2_reg_lambda=0.0, NUM_CLASSES=2, inds=None, vals=None, labels=None):
+    def __init__(self, limits, embed_size=8, fc1_size=200, fc2_size=100, linear_size=800, l2_reg_lambda=0.0, NUM_CLASSES=2, inds=None, vals=None, labels=None, linear=False):
 
         field_size = len(limits) - 1
         features_size = int(limits[-1])
@@ -57,22 +57,6 @@ class DeepFFM():
         self.l2_loss = tf.constant(0.00)
         epsilon = 1e-3
 
-        '''
-        # Linear feature
-        with tf.name_scope("linear1"):
-            batch_size = int(self.inds.get_shape()[0])
-            sp_inds = tf.reshape(tf.add(inds + [limits[:-1]] * batch_size), [-1, field_size, 1])
-            sparse_input = tf.SparseTensor(sp_inds, vals, [limits[-1]])
-            weights = tf.Variable(init_weights([features_size, fc1_size]), name="weights")
-            z_BN = tf.matmul(self.sparse_input, weights)
-            batch_mean, batch_var = tf.nn.moments(z_BN, [0])
-            scale = tf.Variable(tf.ones([fc1_size]))
-            beta = tf.Variable(tf.zeros([fc1_size]))
-            prelu = keras.PReLU()
-            self.linear1 = prelu(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
-            self.l2_loss = tf.nn.l2_loss(weights)
-            '''
-
         # Field_embed
         with tf.name_scope("field_embed"):
             weights = tf.Variable(init_weights([features_size, field_size, embed_size]), name="weights")
@@ -88,19 +72,45 @@ class DeepFFM():
         # Product_layer
         with tf.name_scope("product_layer"):
             self.product_layer = self.act_summary(product_layer_op(self.field_embed))
-
-        # Full Connect 1 with BN
-        with tf.name_scope("fc1"):
             product_layer_size = int(self.product_layer.get_shape()[-1])
-            weights = tf.Variable(init_weights([product_layer_size, fc1_size]), name="weights")
-            z_BN = tf.matmul(self.product_layer, weights)
-            batch_mean, batch_var = tf.nn.moments(z_BN, [0])
-            scale = tf.Variable(tf.ones([fc1_size]))
-            beta = tf.Variable(tf.zeros([fc1_size]))
-            self.fc1 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
 
-            self.l2_loss = tf.nn.l2_loss(weights)
-            variable_summaries(weights)
+        if linear:
+            # Linear feature
+            with tf.name_scope("linear"):
+                batch_size = int(self.inds.get_shape()[0])
+                sp_inds = tf.reshape(tf.add(inds + [limits[:-1]] * batch_size), [-1, field_size, 1])
+                sparse_input = tf.SparseTensor(sp_inds, vals, [limits[-1]])
+                weights = tf.Variable(init_weights([features_size, linear_size]), name="weights")
+                z_BN = tf.matmul(self.sparse_input, weights)
+                batch_mean, batch_var = tf.nn.moments(z_BN, [0])
+                scale = tf.Variable(tf.ones([linear_size]))
+                beta = tf.Variable(tf.zeros([linear_size]))
+                prelu = keras.PReLU()
+                self.linear = prelu(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
+                self.l2_loss = tf.nn.l2_loss(weights)
+            # Full Connect 1 with BN
+            with tf.name_scope("fc1"):
+                weights = tf.Variable(init_weights([product_layer_size + linear_size, fc1_size]), name="weights")
+                z_BN = tf.matmul(tf.concat([self.product_layer, self.linear], 1), weights)
+                batch_mean, batch_var = tf.nn.moments(z_BN, [0])
+                scale = tf.Variable(tf.ones([fc1_size]))
+                beta = tf.Variable(tf.zeros([fc1_size]))
+                self.fc1 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
+
+                self.l2_loss = tf.nn.l2_loss(weights)
+                variable_summaries(weights)
+        else:
+            # Full Connect 1 with BN
+            with tf.name_scope("fc1"):
+                weights = tf.Variable(init_weights([product_layer_size, fc1_size]), name="weights")
+                z_BN = tf.matmul(self.product_layer, weights)
+                batch_mean, batch_var = tf.nn.moments(z_BN, [0])
+                scale = tf.Variable(tf.ones([fc1_size]))
+                beta = tf.Variable(tf.zeros([fc1_size]))
+                self.fc1 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
+
+                self.l2_loss = tf.nn.l2_loss(weights)
+                variable_summaries(weights)
 
         # Linear 2 with BN
         with tf.name_scope("fc2"):

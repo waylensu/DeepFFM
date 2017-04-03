@@ -28,15 +28,13 @@ def train():
     train_file = os.path.join(FLAGS.data_dir, 'train.tfrecords')
     test_file = os.path.join(FLAGS.data_dir, 'test.tfrecords')
 
-    # Load data
-    chosen = np.array(range(39))
 
     # Load limits
     limits_path = os.path.join(FLAGS.data_dir, 'limits.txt')
     limits = [0]
     with open(limits_path) as inFile:
         cols = inFile.readline().strip().split('\t')
-        lens = np.array([1] * 13 + list(map(int, cols)))[chosen]
+        lens = list(map(int, cols))
         for l in lens:
             limits.append(limits[-1] + l)
 
@@ -44,10 +42,11 @@ def train():
         global_step = tf.Variable(0, name='global_step', trainable=False)
         lr = tf.train.exponential_decay(FLAGS.learning_rate, global_step, 100, 0.95, staircase = True)
         optimizer = tf.train.AdamOptimizer(lr)
+        #optimizer = tf.train.AdadeltaOptimizer(lr)
         batch_size = 1000
         inds, vals, labels = inputs(train_file, batch_size, FLAGS.num_epochs)    
         test_inds, test_vals, test_labels = inputs(test_file, batch_size)    
-        deepffm = DeepFFM(limits, 8, l2_reg_lambda = 0.0001, NUM_CLASSES = 2, inds = inds, vals = vals, labels = labels)
+        deepffm = DeepFFM(limits, 8, l2_reg_lambda = 0.00001, NUM_CLASSES = 2, inds = inds, vals = vals, labels = labels)
         train_op = optimizer.minimize(deepffm.loss, global_step = global_step)
         #momentum = 0.9
         #train_op = tf.train.GradientDescentOptimizer(lr).minimize(deepffm.loss)
@@ -56,8 +55,9 @@ def train():
         merged = tf.summary.merge_all()
         sess=tf.Session()
 
-        train_writer = tf.summary.FileWriter(FLAGS.log_dir + '/train', sess.graph)
-        test_writer = tf.summary.FileWriter(FLAGS.log_dir + '/test')
+
+        train_writer = tf.summary.FileWriter(os.path.join(FLAGS.log_dir, 'train'), sess.graph)
+        test_writer = tf.summary.FileWriter(os.path.join(FLAGS.log_dir, 'test'))
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
@@ -104,6 +104,8 @@ def train():
         sess.close()
 
 def main(_):
+    now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    FLAGS.log_dir = os.path.join(FLAGS.log_dir, now)
     if tf.gfile.Exists(FLAGS.log_dir):
         tf.gfile.DeleteRecursively(FLAGS.log_dir)
     tf.gfile.MakeDirs(FLAGS.log_dir)
@@ -113,7 +115,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_epochs', type=int, default=100,
                       help='Number of epochs to run trainer.')
-    parser.add_argument('--learning_rate', type=float, default=0.001,
+    parser.add_argument('--learning_rate', type=float, default=0.01,
                       help='Initial learning rate')
     parser.add_argument('--data_dir', type=str, default='/home/wing/DataSet/criteo/pre/deepffm/downSample',
                       help='Directory for storing input data')
