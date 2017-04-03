@@ -3,7 +3,7 @@ from __future__ import (division,absolute_import,print_function,unicode_literals
 import os.path as osp
 
 
-save_path = '/Volumes/Untitled/data_set/pre'
+save_path = '/home/wing/DataSet/criteo/pre'
 train_ind_path = osp.join(save_path, 'train_ind.txt')
 train_val_path = osp.join(save_path, 'train_val.txt')
 train_label_path = osp.join(save_path, 'train_label.txt')
@@ -12,7 +12,7 @@ limits_path = osp.join(save_path, 'limits.txt')
 
 with open(limits_path) as in_file:
     cols = in_file.readline().strip().split('\t')
-    lens = [1]*13+list(map(int,cols))
+    lens = list(map(int,cols))
     offsets = [0]
     for l in lens:
         offsets.append(offsets[-1] + l)
