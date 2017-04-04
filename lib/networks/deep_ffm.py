@@ -18,8 +18,8 @@ from tensorflow.contrib.metrics import streaming_auc
 from tensorflow.contrib.keras import layers as keras
 from easydict import EasyDict as edict
 
-def variable_summaries(var):
-    with tf.name_scope('summaries'):
+def variable_summaries(var, name):
+    with tf.name_scope(name):
         mean = tf.reduce_mean(var)
         tf.summary.scalar('mean', mean)
         with tf.name_scope('stddev'):
@@ -66,8 +66,8 @@ class DeepFFM():
 
             self.l2_loss = tf.nn.l2_loss(weights)
             self.l2_loss = tf.nn.l2_loss(biases)
-            variable_summaries(weights)
-            variable_summaries(biases)
+            variable_summaries(weights, 'weights')
+            variable_summaries(biases, 'biases')
 
         # Product_layer
         with tf.name_scope("product_layer"):
@@ -103,7 +103,7 @@ class DeepFFM():
                 self.fc1 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
 
                 self.l2_loss = tf.nn.l2_loss(weights)
-                variable_summaries(weights)
+                variable_summaries(weights, 'weights')
         else:
             # Full Connect 1 with BN
             with tf.name_scope("fc1"):
@@ -115,7 +115,7 @@ class DeepFFM():
                 self.fc1 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
 
                 self.l2_loss = tf.nn.l2_loss(weights)
-                variable_summaries(weights)
+                variable_summaries(weights, 'weights')
 
         # Linear 2 with BN
         with tf.name_scope("fc2"):
@@ -126,7 +126,7 @@ class DeepFFM():
             beta = tf.Variable(tf.zeros([fc2_size]))
             self.fc2 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
             self.l2_loss = tf.nn.l2_loss(weights)
-            variable_summaries(weights)
+            variable_summaries(weights, 'weights')
 
         # Softmax
         with tf.name_scope("Softmax"):
@@ -137,8 +137,8 @@ class DeepFFM():
 
             self.l2_loss = tf.nn.l2_loss(weights)
             self.l2_loss = tf.nn.l2_loss(biases)
-            variable_summaries(weights)
-            variable_summaries(biases)
+            variable_summaries(weights, 'weights')
+            variable_summaries(biases, 'biases')
 
         # Loss
         with tf.name_scope("loss"):
