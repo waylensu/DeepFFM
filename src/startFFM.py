@@ -9,18 +9,18 @@
 # =============================================================
 
 from __future__ import (division,absolute_import,print_function,unicode_literals)
-import _init_paths
 import tensorflow as tf
 import numpy as np
 import argparse
 import sys
-from sklearn.datasets import load_iris
-import tensorflow as tf
-from networks.deep_ffm import DeepFFM
-from networks.read_data import read_data_sets
+import datetime
 import os.path
 import time
+
+import _init_paths
 from deepffm_reader import inputs
+from networks.deep_ffm import DeepFFM
+from networks.read_data import read_data_sets
 
 FLAGS = None
 
