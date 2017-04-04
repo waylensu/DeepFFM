@@ -68,11 +68,13 @@ class DeepFFM():
             self.l2_loss = tf.nn.l2_loss(biases)
             variable_summaries(weights, 'weights')
             variable_summaries(biases, 'biases')
+            variable_summaries(self.field_embed, 'output')
 
         # Product_layer
         with tf.name_scope("product_layer"):
             self.product_layer = self.act_summary(product_layer_op(self.field_embed))
             product_layer_size = int(self.product_layer.get_shape()[-1])
+            variable_summaries(self.product_layer, 'output')
 
         if linear:
             # Linear feature
@@ -93,6 +95,8 @@ class DeepFFM():
                 prelu = keras.PReLU()
                 self.linear = prelu(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
                 self.l2_loss = tf.nn.l2_loss(weights)
+                variable_summaries(weights, 'weights')
+                variable_summaries(self.linear, 'output')
             # Full Connect 1 with BN
             with tf.name_scope("fc1"):
                 weights = tf.Variable(init_weights([product_layer_size + linear_size, fc1_size]), name="weights")
@@ -104,6 +108,7 @@ class DeepFFM():
 
                 self.l2_loss = tf.nn.l2_loss(weights)
                 variable_summaries(weights, 'weights')
+                variable_summaries(self.fc1, 'output')
         else:
             # Full Connect 1 with BN
             with tf.name_scope("fc1"):
@@ -116,6 +121,7 @@ class DeepFFM():
 
                 self.l2_loss = tf.nn.l2_loss(weights)
                 variable_summaries(weights, 'weights')
+                variable_summaries(self.fc1, 'output')
 
         # Linear 2 with BN
         with tf.name_scope("fc2"):
@@ -127,6 +133,7 @@ class DeepFFM():
             self.fc2 = self.act_summary(tf.nn.batch_normalization(z_BN, batch_mean, batch_var, beta, scale, epsilon))
             self.l2_loss = tf.nn.l2_loss(weights)
             variable_summaries(weights, 'weights')
+            variable_summaries(self.fc2, 'output')
 
         # Softmax
         with tf.name_scope("Softmax"):
@@ -139,12 +146,15 @@ class DeepFFM():
             self.l2_loss = tf.nn.l2_loss(biases)
             variable_summaries(weights, 'weights')
             variable_summaries(biases, 'biases')
+            variable_summaries(self.logits, 'output')
 
         # Loss
         with tf.name_scope("loss"):
             cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels_))
-            self.loss =  cross_entropy + l2_reg_lambda * self.l2_loss
+            reg_loss = l2_reg_lambda * self.l2_loss
+            self.loss =  cross_entropy + reg_loss
             tf.summary.scalar('cross_entropy', cross_entropy)
+            tf.summary.scalar('l2 loss', reg_loss)
             tf.summary.scalar('loss', self.loss)
 
         # Accuracy
@@ -163,5 +173,5 @@ class DeepFFM():
         tf.summary.histogram('pre_activations', input_tensor)
         prelu = keras.PReLU()
         activations = prelu(input_tensor)
-        tf.summary.histogram('activations', activations)
+        variable_summaries(activations, 'output')
         return activations
