@@ -35,7 +35,7 @@ class DeepFFM():
     def __init__(self, limits, embed_size=8, fc1_size=200, fc2_size=100, linear_size=800, l2_reg_lambda=0.0, NUM_CLASSES=2, inds=None, vals=None, labels=None, linear=False):
 
         field_size = len(limits) - 1
-        features_size = int(limits[-1])
+        feature_size = int(limits[-1])
 
         if inds == None:
             self.inds_ = tf.placeholder(tf.int32, shape=[None, field_size])
@@ -59,7 +59,7 @@ class DeepFFM():
 
         # Field_embed
         with tf.name_scope("field_embed"):
-            weights = tf.Variable(init_weights([features_size, field_size, embed_size]), name="weights")
+            weights = tf.Variable(init_weights([feature_size, field_size, embed_size]), name="weights")
             biases = tf.Variable(init_biases([field_size, field_size, embed_size]), name='biases')
 
             self.field_embed = self.act_summary(field_embed_op(self.inds_, self.vals_, weights, biases, limits))
@@ -77,11 +77,16 @@ class DeepFFM():
         if linear:
             # Linear feature
             with tf.name_scope("linear"):
-                batch_size = int(self.inds.get_shape()[0])
-                sp_inds = tf.reshape(tf.add(inds + [limits[:-1]] * batch_size), [-1, field_size, 1])
-                sparse_input = tf.SparseTensor(sp_inds, vals, [limits[-1]])
-                weights = tf.Variable(init_weights([features_size, linear_size]), name="weights")
-                z_BN = tf.matmul(self.sparse_input, weights)
+                batch_size = int(self.inds_.get_shape()[0])
+
+                sparse_cols = tf.reshape(tf.add(self.inds_, [limits[:-1]] * batch_size), [-1, field_size, 1])
+                sparse_rows = [[[i]] * field_size for i in range(batch_size)]
+                sparse_inds = tf.reshape(tf.cast(tf.concat([sparse_rows, sparse_cols], 2), tf.int64), [-1, 2])
+                sparse_vals = tf.reshape(self.vals_, [-1])
+                sparse_input = tf.SparseTensor(sparse_inds, sparse_vals, [batch_size, feature_size])
+
+                weights = tf.Variable(init_weights([feature_size, linear_size]), name="weights")
+                z_BN = tf.sparse_tensor_dense_matmul(sparse_input, weights)
                 batch_mean, batch_var = tf.nn.moments(z_BN, [0])
                 scale = tf.Variable(tf.ones([linear_size]))
                 beta = tf.Variable(tf.zeros([linear_size]))
@@ -151,6 +156,7 @@ class DeepFFM():
         # Auc
         with tf.name_scope("auc"):
             _,self.auc = streaming_auc(self.logits[:,1], self.labels_)
+            tf.summary.scalar('auc', self.auc)
 
 
     def act_summary(self, input_tensor, act=keras.PReLU()):

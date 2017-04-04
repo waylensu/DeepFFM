@@ -46,7 +46,7 @@ def train():
         batch_size = 1000
         inds, vals, labels = inputs(train_file, batch_size, FLAGS.num_epochs)    
         test_inds, test_vals, test_labels = inputs(test_file, batch_size)    
-        deepffm = DeepFFM(limits, 8, l2_reg_lambda = 0.00001, NUM_CLASSES = 2, inds = inds, vals = vals, labels = labels)
+        deepffm = DeepFFM(limits, 8, l2_reg_lambda = 0.00001, NUM_CLASSES = 2, inds = inds, vals = vals, labels = labels, linear=True)
         train_op = optimizer.minimize(deepffm.loss, global_step = global_step)
         #momentum = 0.9
         #train_op = tf.train.GradientDescentOptimizer(lr).minimize(deepffm.loss)
