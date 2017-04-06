@@ -14,6 +14,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 from sklearn.datasets import load_digits
 
 
+print('start')
 digits = load_digits()
 #mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 field_size = 64

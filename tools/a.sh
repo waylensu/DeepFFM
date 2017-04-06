@@ -9,4 +9,4 @@
 # =============================================================
 
 date=`date "+%Y-%m-%d-%H-%M-%S"`
-nohup python3 ./startFFM.py > ./log/$date.log &
+nohup python3 startFFM.py >log/$date.log 2>&1  &

@@ -16,6 +16,7 @@ import sys
 import datetime
 import os.path
 import time
+import logging
 
 import _init_paths
 from deepffm_reader import inputs
@@ -40,7 +41,7 @@ def train():
 
     with tf.Graph().as_default():
         global_step = tf.Variable(0, name='global_step', trainable=False)
-        lr = tf.train.exponential_decay(FLAGS.learning_rate, global_step, 100, 0.95, staircase = True)
+        lr = tf.train.exponential_decay(FLAGS.learning_rate, global_step, 100, 0.98, staircase = True)
         optimizer = tf.train.AdamOptimizer(lr)
         #optimizer = tf.train.AdadeltaOptimizer(lr)
         batch_size = 1000
@@ -56,8 +57,8 @@ def train():
         sess=tf.Session()
 
 
-        train_writer = tf.summary.FileWriter(os.path.join(FLAGS.log_dir, 'train'), sess.graph)
-        test_writer = tf.summary.FileWriter(os.path.join(FLAGS.log_dir, 'test'))
+        train_writer = tf.summary.FileWriter(os.path.join(FLAGS.summary_dir, 'train'), sess.graph)
+        test_writer = tf.summary.FileWriter(os.path.join(FLAGS.summary_dir, 'test'))
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
@@ -74,7 +75,7 @@ def train():
                     start_time = time.time()
                     _, summary, loss_value, accuracy, auc, lr_value = sess.run([train_op, merged, deepffm.loss, deepffm.accuracy, deepffm.auc, lr])
                     duration = time.time() - start_time
-                    print('Step %d: loss = %.5f, accuracy = %.5f, auc = %.5f, lr = %.5f.(%.5f sec)' % (step, loss_value, accuracy, auc, lr_value, duration))
+                    logging.info('Step %d: loss = %.5f, accuracy = %.5f, auc = %.5f, lr = %.5f.(%.5f sec)' % (step, loss_value, accuracy, auc, lr_value, duration))
                 else:
                     _, summary = sess.run([train_op, merged])
 
@@ -87,13 +88,14 @@ def train():
                     start_time = time.time()
                     summary, loss_value, accuracy, auc = sess.run([merged, deepffm.loss, deepffm.accuracy, deepffm.auc])
                     duration = time.time() - start_time
-                    print('\tTest Step %d: loss = %.5f, accuracy = %.5f, auc = %.5f. (%.5f sec)' % (step, loss_value, accuracy, auc, duration))
+                    logging.info('\tTest Step %d: loss = %.5f, accuracy = %.5f, auc = %.5f. (%.5f sec)' % (step, loss_value, accuracy, auc, duration))
                     test_writer.add_summary(summary, step)
                     deepffm.inds, deepffm.vals, deepffm.labels = [inds, vals, labels]
 
                 step += 1
+                exit(0)
         except tf.errors.OutOfRangeError:
-            print('Done training for %d epochs, %d steps.' % (FLAGS.num_epochs, step))
+            logging.info('Done training for %d epochs, %d steps.' % (FLAGS.num_epochs, step))
         finally:
             coord.request_stop()
 
@@ -105,10 +107,11 @@ def train():
 
 def main(_):
     now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    FLAGS.log_dir = os.path.join(FLAGS.log_dir, now)
-    if tf.gfile.Exists(FLAGS.log_dir):
-        tf.gfile.DeleteRecursively(FLAGS.log_dir)
-    tf.gfile.MakeDirs(FLAGS.log_dir)
+    FLAGS.summary_dir = os.path.join(FLAGS.summary_dir, now)
+    logging.basicConfig(level=logging.INFO, filename=os.path.join(FLAGS.log_dir, now+'.log'))
+    if tf.gfile.Exists(FLAGS.summary_dir):
+        tf.gfile.DeleteRecursively(FLAGS.summary_dir)
+    tf.gfile.MakeDirs(FLAGS.summary_dir)
     train()
 
 if __name__ == '__main__':
@@ -119,7 +122,9 @@ if __name__ == '__main__':
                       help='Initial learning rate')
     parser.add_argument('--data_dir', type=str, default='/home/wing/DataSet/criteo/pre/deepffm/downSample',
                       help='Directory for storing input data')
-    parser.add_argument('--log_dir', type=str, default='/home/wing/Project/DeepFFM/logs/summaries',
+    parser.add_argument('--log_dir', type=str, default='/home/wing/Project/DeepFFM/logs',
+                      help='Summaries log directory')
+    parser.add_argument('--summary_dir', type=str, default='/home/wing/Project/DeepFFM/summaries',
                       help='Summaries log directory')
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

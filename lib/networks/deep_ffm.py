@@ -154,7 +154,7 @@ class DeepFFM():
             reg_loss = l2_reg_lambda * self.l2_loss
             self.loss =  cross_entropy + reg_loss
             tf.summary.scalar('cross_entropy', cross_entropy)
-            tf.summary.scalar('l2 loss', reg_loss)
+            tf.summary.scalar('reg_loss', reg_loss)
             tf.summary.scalar('loss', self.loss)
 
         # Accuracy
