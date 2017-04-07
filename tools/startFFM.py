@@ -93,7 +93,6 @@ def train():
                     deepffm.inds, deepffm.vals, deepffm.labels = [inds, vals, labels]
 
                 step += 1
-                exit(0)
         except tf.errors.OutOfRangeError:
             logging.info('Done training for %d epochs, %d steps.' % (FLAGS.num_epochs, step))
         finally:
