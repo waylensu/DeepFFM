@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python train.py --num_epochs=100 --lr=0.01 --data_dir= --lod_dir= --batch_size=1000 --num_workers=16 
+python3 train.py --num_epochs=100 --lr=0.01 --data_dir=data --log_dir=save/deepffm_v0 --batch_size=1000 --num_workers=2 

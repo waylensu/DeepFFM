@@ -27,41 +27,41 @@ def create_commands(session, num_epochs, lr, data_dir, log_dir, batch_size, num_
         '--data_dir', data_dir,
         '--log_dir', log_dir,
         '--batch_size', batch_size,
-        '--num-workers', num_workers,
+        '--num_workers', num_workers,
     ]
 
     # ps
-    cmds_map = [new_cmd(session, "ps", base_cmd + ["--job-name", "ps"], mode, logdir, shell)]
+    cmds_map = [new_cmd(session, "ps", base_cmd + ["--job_name", "ps"], mode, log_dir, shell)]
 
     # workers for training
     for i in range(num_workers):
         cmds_map += [new_cmd(session, "w-%d" % i,
-                             base_cmd + ["--job-name", "worker", "--task_index", str(i), "--remotes", remotes[i]],
-                             mode, logdir, shell)]
+                             base_cmd + ["--job_name", "worker", "--task_index", str(i), ],
+                             mode, log_dir, shell)]
 
     # tensorboard
-    cmds_map += [new_cmd(session, "tb", ["tensorboard", "--logdir", logdir, "--port", "12345"], mode, logdir, shell)]
+    cmds_map += [new_cmd(session, "tb", ["tensorboard", "--logdir", log_dir, "--port", "12345"], mode, log_dir, shell)]
 
     # htop watcher
     if mode == 'tmux':
-        cmds_map += [new_cmd(session, "htop", ["htop"], mode, logdir, shell)]
+        cmds_map += [new_cmd(session, "htop", ["htop"], mode, log_dir, shell)]
 
     windows = [v[0] for v in cmds_map]
 
     notes = []
     cmds = [
-        "mkdir -p {}".format(logdir),
+        "mkdir -p {}".format(log_dir),
         "echo {} {} > {}/cmd.sh".format(sys.executable, ' '.join([shlex_quote(arg) for arg in sys.argv if arg != '-n']),
-                                        logdir),
+                                        log_dir),
     ]
     if mode == 'nohup' or mode == 'child':
-        cmds += ["echo '#!/bin/sh' >{}/kill.sh".format(logdir)]
-        notes += ["Run `source {}/kill.sh` to kill the job".format(logdir)]
+        cmds += ["echo '#!/bin/sh' >{}/kill.sh".format(log_dir)]
+        notes += ["Run `source {}/kill.sh` to kill the job".format(log_dir)]
     if mode == 'tmux':
         notes += ["Use `tmux attach -t {}` to watch process output".format(session)]
         notes += ["Use `tmux kill-session -t {}` to kill the job".format(session)]
     else:
-        notes += ["Use `tail -f {}/*.out` to watch process output".format(logdir)]
+        notes += ["Use `tail -f {}/*.out` to watch process output".format(log_dir)]
     notes += ["Point your browser to http://localhost:12345 to see Tensorboard"]
 
     if mode == 'tmux':
@@ -93,9 +93,9 @@ def run():
     parser.add_argument('--log_dir', type=str, default='/home/wing/Project/DeepFFM/logs',
                       help='Summaries log directory')
     parser.add_argument('--batch_size', default=1000, type=int, help='Batch size')
-    parser.add_argument('--num-workers', default=3, type=int, help='Number of workers')
+    parser.add_argument('--num_workers', default=3, type=int, help='Number of workers')
 
-    parser.add_argument('--sleep-worker', default=0, type=float,
+    parser.add_argument('--sleep_worker', default=0, type=float,
                         help='sleeping time after starting a worker (before starting the next worker)')
     parser.add_argument('-m', '--mode', type=str, default='tmux',
                         help="tmux: run workers in a tmux session. nohup: run workers with nohup. child: run workers as child processes")
@@ -103,16 +103,12 @@ def run():
                         help="tmux: run workers in a tmux session. nohup: run workers with nohup. child: run workers as child processes")
     args = parser.parse_args()
     cmds, notes = create_commands(args.sess_name, args.num_epochs, args.lr, args.data_dir, args.log_dir, args.batch_size, args.num_workers, sleep_worker=args.sleep_worker)
-    if args.dry_run:
-        print("Dry-run mode due to -n flag, otherwise the following commands would be executed:")
-    else:
-        print("Executing the following commands:")
+
     print("\n".join(cmds))
     print("")
-    if not args.dry_run:
-        if args.mode == "tmux":
-            os.environ["TMUX"] = ""
-        os.system("\n".join(cmds))
+    if args.mode == "tmux":
+        os.environ["TMUX"] = ""
+    os.system("\n".join(cmds))
     print('\n'.join(notes))
 
 

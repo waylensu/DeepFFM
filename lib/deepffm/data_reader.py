@@ -37,9 +37,9 @@ def inputs(filename, batch_size, num_epochs = None):
 
         return inds, vals, labels
 
-def laod_field_range(path):
+def load_field_range(path):
     field_range = [0]
-    with open(limits_path) as inFile:
+    with open(path) as inFile:
         cols = inFile.readline().strip().split('\t')
         lens = list(map(int, cols))
         for l in lens:
