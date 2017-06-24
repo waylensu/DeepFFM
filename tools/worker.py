@@ -37,7 +37,10 @@ def train(server):
     lr = tf.train.exponential_decay(FLAGS.lr, global_step, 100, 0.98, staircase = True)
     optimizer = tf.train.AdamOptimizer(lr)
 
-    deepffm = DeepFFM(field_range, embed_size=8, l2_reg_lambda = 0.00001, NUM_CLASSES=2, inds=train_inds, vals=train_vals, labels=train_labels, linear=True)
+    worker_device = "/job:worker/task:{}/cpu:0".format(FLAGS.task_index)
+    with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
+        deepffm = DeepFFM(field_range, embed_size=8, l2_reg_lambda = 0.00001, NUM_CLASSES=2, inds=train_inds, vals=train_vals, labels=train_labels, linear=True)
+
     train_op = optimizer.minimize(deepffm.loss, global_step = global_step)
 
     init_all_op = tf.global_variables_initializer()
