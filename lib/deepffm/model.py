@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-# =============================================================
-#  File Name : deep_ffm.py
-#  Author : waylensu
-#  Mail : waylensu@163.com
-#  Created Time : Tue Mar 28 20:18:15 2017
-# =============================================================
-
 from __future__ import (division,absolute_import,print_function,unicode_literals)
 import tensorflow as tf
 from field_embed.field_embed_op import field_embed as field_embed_op
@@ -30,7 +23,6 @@ def variable_summaries(var, name):
         tf.summary.histogram('histogram', var)
 
 class DeepFFM():
-
 
     def __init__(self, limits, embed_size=8, fc1_size=200, fc2_size=100, linear_size=800, l2_reg_lambda=0.0, NUM_CLASSES=2, inds=None, vals=None, labels=None, linear=False):
 

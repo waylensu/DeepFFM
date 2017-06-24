@@ -1,11 +1,5 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Set up paths for Fast R-CNN."""
+#!/usr/bin/env python
+# coding=utf-8
 
 import os.path as osp
 import sys

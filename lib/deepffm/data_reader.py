@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-# =============================================================
-#  File Name : reader.py
-#  Author : waylensu
-#  Mail : waylensu@163.com
-#  Created Time : 2017年04月02日 星期日 16时42分50秒
-# =============================================================
-
 from __future__ import (division,absolute_import,print_function,unicode_literals)
 import tensorflow as tf
 
@@ -43,3 +36,12 @@ def inputs(filename, batch_size, num_epochs = None):
         inds, vals, labels = tf.train.shuffle_batch([ind, val, label], batch_size=batch_size, num_threads=2,capacity=1000 + 3 * batch_size, min_after_dequeue=1000)
 
         return inds, vals, labels
+
+def laod_field_range(path):
+    field_range = [0]
+    with open(limits_path) as inFile:
+        cols = inFile.readline().strip().split('\t')
+        lens = list(map(int, cols))
+        for l in lens:
+            field_range.append(field_range[-1] + l)
+    return field_range
