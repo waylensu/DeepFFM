@@ -9,7 +9,7 @@ def new_cmd(session, name, cmd, mode, logdir, shell, redirect_file=None):
         cmd = " ".join(shlex_quote(str(v)) for v in cmd)
     if mode == 'tmux':
         if redirect_file:
-            return name, "tmux send-keys -t {}:{} {} Enter".format(session, name, shlex_quote(cmd+" |tee -a {}".format(redirect_file)))
+            return name, "tmux send-keys -t {}:{} {} Enter".format(session, name, shlex_quote(cmd+" 2>&1 | tee -a {}".format(redirect_file)))
         else:
             return name, "tmux send-keys -t {}:{} {} Enter".format(session, name, shlex_quote(cmd))
     elif mode == 'child':

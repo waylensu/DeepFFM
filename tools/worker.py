@@ -36,7 +36,7 @@ def train(server):
         train_inds, train_vals, train_labels = inputs(train_file, FLAGS.batch_size, FLAGS.num_epochs)    
         test_inds, test_vals, test_labels = inputs(test_file, FLAGS.batch_size, FLAGS.num_epochs)    
         with tf.variable_scope("model"):
-            deepffm = DeepFFM(field_range, embed_size=8, l2_reg_lambda = 0.00001, NUM_CLASSES=2, inds=train_inds, vals=train_vals, labels=train_labels, linear=True)
+            deepffm = DeepFFM(field_range, embed_size=8, l2_reg_lambda = 0.00001, NUM_CLASSES=2, inds=train_inds, vals=train_vals, labels=train_labels, linear=False)
             global_step = tf.Variable(0, name='global_step', trainable=False)
 
     lr = tf.train.exponential_decay(FLAGS.lr, global_step, 100, 0.98, staircase = True)
@@ -55,6 +55,12 @@ def train(server):
     config = tf.ConfigProto(device_filters=["/job:ps", "/job:worker/task:{}/cpu:0".format(FLAGS.task_index)])
     logdir = os.path.join(FLAGS.log_dir, 'model')
 
+    train_logdir = os.path.join(FLAGS.log_dir, 'train')
+    test_logdir = os.path.join(FLAGS.log_dir, 'test')
+
+    train_writer = tf.summary.FileWriter('{}_{}'.format(train_logdir, FLAGS.task_index))
+    test_writer = tf.summary.FileWriter('{}_{}'.format(test_logdir, FLAGS.task_index))
+
     sv = tf.train.Supervisor(is_chief=(FLAGS.task_index == 0),
                              logdir=logdir,
                              saver=saver,
@@ -62,18 +68,13 @@ def train(server):
                              init_op=init_all_op,
                              init_fn=init_fn,
                              ready_op=tf.report_uninitialized_variables(variables_to_save),
-                             #summary_writer=summary_writer,
+                             summary_writer=train_writer,
                              global_step=global_step,
                              )
 
-    train_logdir = os.path.join(FLAGS.log_dir, 'train')
-    test_logdir = os.path.join(FLAGS.log_dir, 'test')
-
-    train_writer = tf.summary.FileWriter('{}_{}'.format(train_logdir, FLAGS.task_index))
-    test_writer = tf.summary.FileWriter('{}_{}'.format(test_logdir, FLAGS.task_index))
-
     with sv.managed_session(server.target, config=config) as sess, sess.as_default():
         global_step_ = sess.run(global_step)
+        sess.run(init_all_op)
         step = 0
         while not sv.should_stop() :
             try:
@@ -85,7 +86,7 @@ def train(server):
                     logging.info('Step %d: loss = %.5f, accuracy = %.5f, auc = %.5f, lr = %.5f.(%.5f sec)' % (step, loss_value, accuracy, auc, lr_value, duration))
                 else:
                     _, summary = sess.run([train_op, merged])
-                train_writer.add_summary(summary, global_step)
+                train_writer.add_summary(summary, global_step_)
 
                 # Test data
                 if step % 100 == 0:
@@ -94,14 +95,14 @@ def train(server):
                     summary, loss_value, accuracy, auc = sess.run([merged, deepffm.loss, deepffm.accuracy, deepffm.auc])
                     duration = time.time() - start_time
                     logging.info('\tTest Step %d: loss = %.5f, accuracy = %.5f, auc = %.5f. (%.5f sec)' % (step, loss_value, accuracy, auc, duration))
-                    test_writer.add_summary(summary, global_step)
-                    deepffm.inds, deepffm.vals, deepffm.labels = [inds, vals, labels]
+                    test_writer.add_summary(summary, global_step_)
+                    deepffm.inds, deepffm.vals, deepffm.labels = [train_inds, train_vals, train_labels]
 
             except tf.errors.OutOfRangeError:
                 logging.info('Done training for %d epochs, %d steps.' % (FLAGS.num_epochs, step))
             finally:
                 sv.stop()
-                logger.info('reached %s steps. worker stopped.', global_step)
+                logging.info('reached %s steps. worker stopped.', global_step_)
                 train_writer.close()
                 test_writer.close()
 
@@ -127,13 +128,14 @@ def cluster_spec(num_workers, num_ps):
 def main(_):
     now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
-    logging.basicConfig(level=logging.INFO, filename=os.path.join(FLAGS.log_dir, now+'.log'))
+    #logging.basicConfig(level=logging.INFO, filename=os.path.join(FLAGS.log_dir, now+'.log'))
+    logging.basicConfig(level=logging.INFO)
 
     spec = cluster_spec(FLAGS.num_workers, 1)
     cluster = tf.train.ClusterSpec(spec).as_cluster_def()
 
     def shutdown(signal, frame):
-        logger.warn('Received signal %s: exiting', signal)
+        logging.warn('Received signal %s: exiting', signal)
         sys.exit(128 + signal)
 
     signal.signal(signal.SIGHUP, shutdown)
