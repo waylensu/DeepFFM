@@ -20,32 +20,33 @@ from deepffm.model import DeepFFM
 FLAGS = None
 
 def train(server):
+    # set train parameter
+    batch_size = FLAGS.batch_size
 
     # Load inputs
     train_file = os.path.join(FLAGS.data_dir, 'train.tfrecords')
     test_file = os.path.join(FLAGS.data_dir, 'test.tfrecords')
-    train_inds, train_vals, train_labels = inputs(train_file, FLAGS.batch_size, FLAGS.num_epochs)    
-    test_inds, test_vals, test_labels = inputs(test_file, FLAGS.batch_size, FLAGS.num_epochs)    
 
     # Load field range
     field_range_path = os.path.join(FLAGS.data_dir, 'field_range.txt')
     field_range = load_field_range(field_range_path)
 
-    # set train parameter
-    batch_size = FLAGS.batch_size
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-    lr = tf.train.exponential_decay(FLAGS.lr, global_step, 100, 0.98, staircase = True)
-    optimizer = tf.train.AdamOptimizer(lr)
-
     worker_device = "/job:worker/task:{}/cpu:0".format(FLAGS.task_index)
     with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
-        deepffm = DeepFFM(field_range, embed_size=8, l2_reg_lambda = 0.00001, NUM_CLASSES=2, inds=train_inds, vals=train_vals, labels=train_labels, linear=True)
+        train_inds, train_vals, train_labels = inputs(train_file, FLAGS.batch_size, FLAGS.num_epochs)    
+        test_inds, test_vals, test_labels = inputs(test_file, FLAGS.batch_size, FLAGS.num_epochs)    
+        with tf.variable_scope("model"):
+            deepffm = DeepFFM(field_range, embed_size=8, l2_reg_lambda = 0.00001, NUM_CLASSES=2, inds=train_inds, vals=train_vals, labels=train_labels, linear=True)
+            global_step = tf.Variable(0, name='global_step', trainable=False)
 
+    lr = tf.train.exponential_decay(FLAGS.lr, global_step, 100, 0.98, staircase = True)
+    optimizer = tf.train.AdamOptimizer(lr)
     train_op = optimizer.minimize(deepffm.loss, global_step = global_step)
 
-    init_all_op = tf.global_variables_initializer()
+    init_all_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
     merged = tf.summary.merge_all()
-    saver = tf.train.Saver()
+    variables_to_save = [v for v in tf.global_variables() if v.name.startswith("model")]
+    saver = tf.train.Saver(variables_to_save)
 
     def init_fn(ses):
         logging.info("Initializing all parameters.")
@@ -60,6 +61,7 @@ def train(server):
                              summary_op=None,
                              init_op=init_all_op,
                              init_fn=init_fn,
+                             ready_op=tf.report_uninitialized_variables(variables_to_save),
                              #summary_writer=summary_writer,
                              global_step=global_step,
                              )

@@ -4,11 +4,14 @@ import sys
 from six.moves import shlex_quote
 
 
-def new_cmd(session, name, cmd, mode, logdir, shell):
+def new_cmd(session, name, cmd, mode, logdir, shell, redirect_file=None):
     if isinstance(cmd, (list, tuple)):
         cmd = " ".join(shlex_quote(str(v)) for v in cmd)
     if mode == 'tmux':
-        return name, "tmux send-keys -t {}:{} {} Enter".format(session, name, shlex_quote(cmd))
+        if redirect_file:
+            return name, "tmux send-keys -t {}:{} {} Enter".format(session, name, shlex_quote(cmd+" |tee -a {}".format(redirect_file)))
+        else:
+            return name, "tmux send-keys -t {}:{} {} Enter".format(session, name, shlex_quote(cmd))
     elif mode == 'child':
         return name, "{} >{}/{}.{}.out 2>&1 & echo kill $! >>{}/kill.sh".format(cmd, logdir, session, name, logdir)
     elif mode == 'nohup':
@@ -31,13 +34,13 @@ def create_commands(session, num_epochs, lr, data_dir, log_dir, batch_size, num_
     ]
 
     # ps
-    cmds_map = [new_cmd(session, "ps", base_cmd + ["--job_name", "ps"], mode, log_dir, shell)]
+    cmds_map = [new_cmd(session, "ps", base_cmd + ["--job_name", "ps"], mode, log_dir, shell, 'logs/ps.log')]
 
     # workers for training
     for i in range(num_workers):
         cmds_map += [new_cmd(session, "w-%d" % i,
                              base_cmd + ["--job_name", "worker", "--task_index", str(i), ],
-                             mode, log_dir, shell)]
+                             mode, log_dir, shell, 'logs/w-{}.log'.format(i))]
 
     # tensorboard
     cmds_map += [new_cmd(session, "tb", ["tensorboard", "--logdir", log_dir, "--port", "12345"], mode, log_dir, shell)]
