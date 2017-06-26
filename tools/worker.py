@@ -83,11 +83,12 @@ def train(server):
                 # Train data
                 if step % 10 == 0:
                     start_time = time.time()
-                    _, summary, loss_value, accuracy, auc, lr_value, global_step, logits, labels = sess.run([train_op, merged, deepffm.loss, deepffm.accuracy, deepffm.auc, lr, global_step_op, deepffm.logits, deepffm.labels_])
-                    sklearn_auc = roc_auc_score(labels, logits)
-                    duration = time.time() - start_time
+                    _, summary, loss_value, accuracy, auc, lr_value, global_step, logits, labels = sess.run([train_op, merged, deepffm.loss, deepffm.accuracy, deepffm.auc, lr, global_step_op, deepffm.logits[:,1], deepffm.labels_])
+                    sk_auc = roc_auc_score(labels, logits)
 
-                    logging.info('Step %d, Global %d, : loss = %.5f, accuracy = %.5f, auc = %.5f, sk_auc = %.5f, lr = %.5f.(%.5f sec)' % (step, global_step, loss_value, accuracy, auc, sklearn_auc, lr_value, duration))
+                    duration = time.time() - start_time
+                    logging.info('Step %d, Global %d, : loss = %.5f, accuracy = %.5f, auc = %.5f, sk_auc = %.5f, lr = %.5f.(%.5f sec)' \
+                            % (step, global_step, loss_value, accuracy, auc, sk_auc, lr_value, duration))
 
                 else:
                     _, summary = sess.run([train_op, merged])
@@ -97,10 +98,12 @@ def train(server):
                 if step % 100 == 0:
                     deepffm.inds, deepffm.vals, deepffm.labels = [test_inds, test_vals, test_labels]
                     start_time = time.time()
-                    summary, loss_value, accuracy, auc = sess.run([merged, deepffm.loss, deepffm.accuracy, deepffm.auc])
-                    duration = time.time() - start_time
+                    summary, loss_value, accuracy, auc, logits, labels = sess.run([merged, deepffm.loss, deepffm.accuracy, deepffm.auc, deepffm.logits[:,1], deepffm.labels_])
+                    sk_auc = roc_auc_score(labels, logits)
 
-                    logging.info('\tTest Step %d, Global %d, : loss = %.5f, accuracy = %.5f, auc = %.5f. (%.5f sec)' % (step, global_step, loss_value, accuracy, auc, duration))
+                    duration = time.time() - start_time
+                    logging.info('\tTest Step %d, Global %d, : loss = %.5f, accuracy = %.5f, auc = %.5f, sk_auc = %.5f. (%.5f sec)' \
+                            % (step, global_step, loss_value, accuracy, auc, sk_auc, duration))
 
                     test_writer.add_summary(summary, global_step)
                     deepffm.inds, deepffm.vals, deepffm.labels = [train_inds, train_vals, train_labels]
